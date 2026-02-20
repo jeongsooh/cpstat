@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block contents %}
+<div class="row mt-3 mx-3">
+  <div class="col-md-8 fw-bold"><h4>사용자관리</h4></div>
+  <div class="col-md-2">
+  </div>
+  <div class="col-md-2 ">
+    <form method="get" action="/user">
+      <div class="input-group input-group-sm">
+        <input type="text" class="form-control" name="q" placeholder="" aria-label="Recipient's userid" aria-describedby="button-addon2">
+        <button class="btn btn-primary" type="submit" id="button-addon2">
+          <i class="bi bi-search"></i>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="row mt-3 mx-3">
+  <div class="col-md-9 fw-bold"><h5>사용자정보</h5></div>
+  <div class="col-md-3 d-grid justify-content-md-end">
+    <button class="btn btn-primary btn-sm" 
+      onclick="location.href='/user/register/'">사용자추가
+    </button>
+  </div>
+</div>
+<div class="row mt-2 mx-2">
+  <div class="col-12">
+    <table class="table table-light">
+      <thead class="thead-light">
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">사용자아이디</th>
+          <th scope="col">사용자이름</th>
+          <th scope="col">이메일</th>
+          <th scope="col">등록삭제</th>
+        </tr>
+      </thead>
+      <tbody class="text-dark">
+        {% for user in userList %}
+        <tr>
+          <th scope="row">{{ user.id }}</th>
+          <th><a href="/user/{{ user.id }}">{{ user.userid }}</a></th>
+          <th>{{ user.name }}</th>
+          <th>{{ user.email }}</th>
+          <th><a class="btn btn-primary btn-sm btn-danger" id="user-{{ user.id }}" href="/user/{{ user.id }}/delete" target="_blank">삭제</a></th>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center">등록된 사용자가 없습니다.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
