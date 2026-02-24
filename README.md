@@ -10,3 +10,8 @@
 $ python manage.py load_charger_csv --path './data'
 $ python manage.py clear_charger_data
 ```
+
+### v02 upload 260224
+- dashboard: staticstics
+- data upload
+- download data with csv form
