@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block contents %}
+<div class="row mt-3 mx-3">
+  <div class="col-md-12 fw-bold"><h4>충전기 현황 통계</h4></div>
+</div>
+<div class="row mt-3 mx-3">
+  <div class="col-md-12 fw-bold"><h5>전체 충전기 충전 및 장애 현황</h5></div>
+  <div class="col-md-6 fw-bold"><h6>지난 3일 간 충전율 추이(%)</h6>
+    <div style="position: relative; height:40vh; width:100%">
+      <canvas id="chargingRatioChart"></canvas>
+    </div>
+  </div>
+  <div class="col-md-6 fw-bold"><h6>지난 3일 간 장애율 추이(%)</h6>
+    <div style="position: relative; height:40vh; width:100%">
+      <canvas id="errorRatioChart"></canvas>
+    </div>
+  </div>
+</div>
+<div class="row mt-3 mx-3">
+  <div class="col-md-10 fw-bold"><h5>충전기 현황 상세정보: {{ selected_busi_name }}</h5></div>
+  <div class="col-md-2">
+    <form method="get" action="">
+      <select name="busiid" id="busiid" class="form-select" onchange="this.form.submit()">
+        {% for busi in busiid_list %}
+          <option value="{{ busi.id }}" {% if busi.id == selected_busiid %}selected{% endif %}>
+            {{ busi.name }} ({{ busi.id }})
+          </option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+</div>
+<div class="row mt-2 mx-2">
+  <div class="col-12">
+    <table class="table table-light">
+      <thead class="thead-light">
+        <tr>
+          <th>수집 일자</th>
+          <th>시간</th>
+          <th>통신이상(1)</th>
+          <th>충전대기(2)</th>
+          <th>충전중(3)</th>
+          <th>운영중지(4)</th>
+          <th>점검중(5)</th>
+          <th>상태미확인(9)</th>
+          <th>합계</th>
+          <th>추정충전율</th>
+          <th>추정장애율</th>
+        </tr>
+      </thead>
+      <tbody class="text-dark">
+        {% for stat in cpstatsumList %}
+        <tr>
+          <!-- <th scope="row">{{ user.id }}</th>
+          <th><a href="/user/{{ user.id }}">{{ user.userid }}</a></th> -->
+          <td>{{ stat.collected_date|date:"Y-m-d" }}</td>
+          <td>{{ stat.hour }}시</td>
+          <td>{{ stat.stat_1_count }}</td>
+          <td>{{ stat.stat_2_count }}</td>
+          <td>{{ stat.stat_3_count }}</td>
+          <td>{{ stat.stat_4_count }}</td>
+          <td>{{ stat.stat_5_count }}</td>
+          <td>{{ stat.stat_9_count }}</td>
+          <td><strong>{{ stat.total_count }}</strong></td>
+          <td>{{ stat.charging_ratio|floatformat:2 }}%</td>
+          <td>{{ stat.error_ratio|floatformat:2 }}%</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center">등록된 충전기 통계가 없습니다.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if is_paginated %}
+      <div class="row">
+        <div class="col-md-12">
+          <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+              {% if page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?page=1">처음</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.previous_page_number }}">이전</a>
+                </li>
+              {% endif %}
+
+              <li class="page-item disabled">
+                <a class="page-link" href="#">{{ page_obj.number }}</a>
+              </li>
+
+              {% if page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.next_page_number }}">다음</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">마지막</a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Django context에서 넘겨받은 JSON 데이터 파싱 (escapejs 필수)
+    const rawData = '{{ chart_data_json|escapejs }}';
+    if (!rawData) return;
+    
+    const chartData = JSON.parse(rawData);
+
+    // 차트에 랜덤한 색상을 부여하기 위한 함수
+    function getRandomColor(index) {
+        const colors = [
+            'rgb(255, 99, 132)', 'rgb(54, 162, 235)', 'rgb(255, 205, 86)',
+            'rgb(75, 192, 192)', 'rgb(153, 102, 255)', 'rgb(255, 159, 64)',
+            'rgb(201, 203, 207)', 'rgb(100, 200, 100)'
+        ];
+        return colors[index % colors.length];
+    }
+
+    // 충전율 데이터셋에 색상 적용
+    chartData.charge_datasets.forEach((dataset, i) => {
+        dataset.borderColor = getRandomColor(i);
+        dataset.backgroundColor = getRandomColor(i);
+        dataset.tension = 0.1; // 선의 곡률
+        dataset.fill = false;
+    });
+
+    // 장애율 데이터셋에 색상 적용
+    chartData.error_datasets.forEach((dataset, i) => {
+        dataset.borderColor = getRandomColor(i);
+        dataset.backgroundColor = getRandomColor(i);
+        dataset.tension = 0.1;
+        dataset.fill = false;
+    });
+
+    // --- 충전율 차트 그리기 ---
+    const ctxCharge = document.getElementById('chargingRatioChart').getContext('2d');
+    new Chart(ctxCharge, {
+        type: 'line',
+        data: {
+            labels: chartData.labels, // x축 (시간)
+            datasets: chartData.charge_datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, max: 50 }
+            }
+        }
+    });
+
+    // --- 장애율 차트 그리기 ---
+    const ctxError = document.getElementById('errorRatioChart').getContext('2d');
+    new Chart(ctxError, {
+        type: 'line',
+        data: {
+            labels: chartData.labels, // x축 (시간)
+            datasets: chartData.error_datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, max: 20 } // 장애율도 %이므로 최대 100
+            }
+        }
+    });
+  });
+</script>
+{% endblock %}

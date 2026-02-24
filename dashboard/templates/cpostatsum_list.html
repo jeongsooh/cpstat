@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block contents %}
+<div class="row mt-3 mx-3">
+  <div class="col-md-10 fw-bold"><h4>사업자 별 충전기 현황 통계</h4></div>
+  <!-- <div class="col-md-2">
+    <form method="get" action="">
+      <select name="busiid" id="busiid" class="form-select" onchange="this.form.submit()">
+        {% for busi in busiid_list %}
+          <option value="{{ busi.id }}" {% if busi.id == selected_busiid %}selected{% endif %}>
+            {{ busi.name }} ({{ busi.id }})
+          </option>
+        {% endfor %}
+      </select>
+    </form>
+  </div> -->
+</div>
+<div class="row mt-3 mx-3">
+  <div class="col-md-12 fw-bold"><h5>충전기 현황 정보: {{ selected_busi_name }}</h5></div>
+  <div class="col-md-12 text-end">
+    <form method="get" action="" class="d-flex justify-content-end align-items-center gap-2">
+      
+      <select name="busiid" id="busiid" class="form-select w-auto">
+        {% for busi in busiid_list %}
+          <option value="{{ busi.id }}" {% if busi.id == selected_busiid %}selected{% endif %}>
+            {{ busi.name }} ({{ busi.id }})
+          </option>
+        {% endfor %}
+      </select>
+
+      <input type="date" name="start_date" class="form-control w-auto" value="{{ start_date }}">
+      <select name="start_hour" class="form-select w-auto">
+        <option value="">시작 시간</option>
+        {% for i in "0123456789"|make_list %}
+           {% endfor %}
+      </select>
+      
+      <input type="number" name="start_hour" class="form-control w-auto" placeholder="시 (0~23)" min="0" max="23" value="{{ start_hour }}" style="width: 90px;">
+      
+      <span class="fw-bold">~</span>
+
+      <input type="date" name="end_date" class="form-control w-auto" value="{{ end_date }}">
+      <input type="number" name="end_hour" class="form-control w-auto" placeholder="시 (0~23)" min="0" max="23" value="{{ end_hour }}" style="width: 90px;">
+
+      <button type="submit" class="btn btn-primary">검색</button>
+      
+      <button type="submit" name="export" value="csv" class="btn btn-success">CSV 다운로드</button>
+    </form>
+  </div>
+</div>
+
+
+
+
+
+<div class="row mt-2 mx-2">
+  <div class="col-12">
+    <table class="table table-light">
+      <thead class="thead-light">
+        <tr>
+          <th>수집 일자</th>
+          <th>시간</th>
+          <th>통신이상(1)</th>
+          <th>충전대기(2)</th>
+          <th>충전중(3)</th>
+          <th>운영중지(4)</th>
+          <th>점검중(5)</th>
+          <th>상태미확인(9)</th>
+          <th>합계</th>
+          <th>추정충전율</th>
+          <th>추정장애율</th>
+        </tr>
+      </thead>
+      <tbody class="text-dark">
+        {% for stat in cpostatsumList %}
+        <tr>
+          <!-- <th scope="row">{{ user.id }}</th>
+          <th><a href="/user/{{ user.id }}">{{ user.userid }}</a></th> -->
+          <td>{{ stat.collected_date|date:"Y-m-d" }}</td>
+          <td>{{ stat.hour }}시</td>
+          <td>{{ stat.stat_1_count }}</td>
+          <td>{{ stat.stat_2_count }}</td>
+          <td>{{ stat.stat_3_count }}</td>
+          <td>{{ stat.stat_4_count }}</td>
+          <td>{{ stat.stat_5_count }}</td>
+          <td>{{ stat.stat_9_count }}</td>
+          <td><strong>{{ stat.total_count }}</strong></td>
+          <td>{{ stat.charging_ratio|floatformat:2 }}%</td>
+          <td>{{ stat.error_ratio|floatformat:2 }}%</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center">등록된 충전기 통계가 없습니다.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if is_paginated %}
+      <div class="row">
+        <div class="col-md-12">
+          <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+              {% if page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?page=1">처음</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.previous_page_number }}">이전</a>
+                </li>
+              {% endif %}
+
+              <li class="page-item disabled">
+                <a class="page-link" href="#">{{ page_obj.number }}</a>
+              </li>
+
+              {% if page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.next_page_number }}">다음</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">마지막</a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

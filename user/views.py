@@ -87,7 +87,7 @@ def index(request):
     form = LoginForm(request.POST)
     if form.is_valid():
       request.session['user'] = form.data.get('userid')
-      return redirect('user/')
+      return redirect('dashboard/')
   else:
     form = LoginForm()
   return render(request, 'index.html', {'form': form})

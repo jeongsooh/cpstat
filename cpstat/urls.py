@@ -23,4 +23,5 @@ urlpatterns = [
     path('', index),
     path('logout/', logout),
     path('user/', include('user.urls')),
+    path('dashboard/', include('dashboard.urls')),
 ]

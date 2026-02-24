@@ -3,7 +3,7 @@
   <!-- Required meta tags -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CSMS Console</title>
+  <title>GRE CP_info</title>
   <!-- CSS only -->
   {% load static %}
   <!-- CSS only -->
@@ -20,20 +20,6 @@
   <!-- Navbar -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
     <div class="container-fluid">
-      <!-- offcanvas trigger -->
-      <button 
-        class="navbar-toggler" 
-        type="button" 
-        data-bs-toggle="offcanvas" 
-        data-bs-target="#offcanvasExample" 
-        aria-controls="offcanvasExample"
-      >
-        <span 
-          class="navbar-toggler-icon" 
-          data-bs-target="#offcanvasExample"
-        ></span>
-      </button>
-      <!-- offcanvas trigger -->
       <a class="navbar-brand fw-bold me-auto" href="#">GRE 사내정보</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
@@ -59,11 +45,7 @@
   <!-- Navbar end -->
 
   <!-- offcanvas --> 
-  <div 
-    class="offcanvas bg-dark sidebar-nav" 
-    tabindex="-1" id="offcanvasExample" 
-    aria-labelledby="offcanvasExampleLabel"
-  >
+  <div class="offcanvas bg-dark sidebar-nav" tabindex="-1" id="offcanvasExample" aria-labelledby="offcanvasExampleLabel">
     <div class="offcanvas-body p-0">
       <nav class="navbar-dark">
         <ul class="navbar-nav">
@@ -72,33 +54,90 @@
               <span class="me-2">
                 <i class="bi bi-speedometer2"></i>
               </span>
-              <span>충전기현황</span>
-            </a>
-          </li>
-          <!-- <li>
-            <a href="/evcharger/" class="nav-link p-3 active">
-              <span class="me-2">
-                <i class="bi bi-plug"></i>
-              </span>
-              <span>충전기관리</span>
+              <span>전체충전기현황</span>
             </a>
           </li>
           <li>
-            <a href="/charginginfo/" class="nav-link p-3 active">
-              <span class="me-2">
-                <i class="bi bi-battery-half"></i>
-              </span>
-              <span>충전정보</span>
+            <a class="nav-link p-3 active sidebar-link" data-bs-toggle="collapse" href="#maincollapse" role="button" aria-expanded="False" aria-controls="maincollapse">
+            <span class="me-2"><i class="bi bi-house"></i></span>
+            <span>통계자료</span>
+            <span class="right-icon ms-auto"><i class="bi bi-chevron-down"></i></span>
             </a>
+            <div class="collapse" id="maincollapse">
+              <div>
+                <ul class="navbar-nav ps-3">
+                  <li>
+                    <a href="/dashboard/cpo/" class="nav-link px-3">
+                      <span class="me-2">
+                        <i class="bi bi-layout-split"></i>
+                      </span>
+                      <span>사업자별충전기현황</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <ul class="navbar-nav ps-3">
+                  <li>
+                    <a href="/evmain/evengine/" class="nav-link px-3">
+                      <span class="me-2">
+                        <i class="bi bi-layout-split"></i>
+                      </span>
+                      <span>일일기기별충전량</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <ul class="navbar-nav ps-3">
+                  <li>
+                    <a href="/evmain/evweek/" class="nav-link px-3">
+                      <span class="me-2">
+                        <i class="bi bi-layout-split"></i>
+                      </span>
+                      <span>주간서비스현황</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <ul class="navbar-nav ps-3">
+                  <li>
+                    <a href="/evmain/evweekcharger/" class="nav-link px-3">
+                      <span class="me-2">
+                        <i class="bi bi-layout-split"></i>
+                      </span>
+                      <span>주간기기별충전량</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <ul class="navbar-nav ps-3">
+                  <li>
+                    <a href="/evmain/evmonth/" class="nav-link px-3">
+                      <span class="me-2">
+                        <i class="bi bi-layout-split"></i>
+                      </span>
+                      <span>월간서비스현황</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <ul class="navbar-nav ps-3">
+                  <li>
+                    <a href="/evmain/evmonthcharger/" class="nav-link px-3">
+                      <span class="me-2">
+                        <i class="bi bi-layout-split"></i>
+                      </span>
+                      <span>월간기기별충전량</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </li>
-          <li>
-            <a href="/cardinfo/" class="nav-link p-3 active">
-              <span class="me-2">
-                <i class="bi bi-credit-card"></i>
-              </span>
-              <span>충전카드관리</span>
-            </a>
-          </li> -->
           <li>
             <a href="/user/" class="nav-link p-3 active">
               <span class="me-2">
