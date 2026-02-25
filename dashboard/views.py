@@ -9,106 +9,124 @@ from .models import cpstatSum
 # from .forms import RegisterForm, LoginForm
 
 # # Create your views here.
+import json
+from django.db.models import Sum, F
+from django.views.generic import ListView
+from .models import cpstatSum
 
 class cpstatSumList(ListView):
-  model = cpstatSum
-  template_name='cpstatsum_list.html'
-  context_object_name = 'cpstatsumList'
-  paginate_by = 12
-  queryset = cpstatSum.objects.all()
+    model = cpstatSum
+    template_name = 'cpstatsum_list.html'
+    context_object_name = 'cpstatsumList'
+    paginate_by = 12
 
-
-  def get_queryset(self):
-    selected_busiid = self.request.GET.get("busiid", "TOTAL")
-    queryset = cpstatSum.objects.filter(busiid=selected_busiid).order_by('-collected_date', '-hour')
-
-    return queryset
-
-  def get_context_data(self, **kwargs):
-    context = super(cpstatSumList, self).get_context_data(**kwargs)
-    selected_busiid = self.request.GET.get("busiid", "TOTAL")
-
-    BUSI_MAP = {
-      'PL': '플러그링크', 'ME': '기후환경부', 'EV': '에버온', 'LU': 'LG유플러스볼트업',
-      'NT': '나이스차저', 'PI': 'GS차지비', 'PW': '파워큐브코리아', 'TOTAL': '전체사업자',
-      'GRE': '플러그링크(GRE)', # GRE도 매핑 추가 (필요에 따라 이름 조정)
-    }
-    raw_busiid_list = cpstatSum.objects.values_list('busiid', flat=True).distinct().order_by('busiid')
+    def get_queryset(self):
+        # 1. 상위 5개 사업자 + TOTAL + GRE 찾기
+        top_5_qs = cpstatSum.objects.exclude(busiid__in=['TOTAL', 'GRE']).values('busiid').annotate(
+            grand_total=Sum(
+                F('stat_1_count') + F('stat_2_count') + F('stat_3_count') + 
+                F('stat_4_count') + F('stat_5_count') + F('stat_9_count')
+            )
+        ).order_by('-grand_total')[:5]
         
-    # 3. HTML 템플릿에서 쓰기 좋게 [{'id': 'PL', 'name': '플러그링크'}, ...] 형태로 가공
-    formatted_busiid_list = []
-    for b_id in raw_busiid_list:
-        formatted_busiid_list.append({
-            'id': b_id,
-            'name': BUSI_MAP.get(b_id, b_id) # 딕셔너리에 없으면 그냥 ID(예: 'XX')를 출력
-        })
+        # 클래스 변수로 저장하여 get_context_data에서도 사용
+        self.target_busiids = [item['busiid'] for item in top_5_qs] + ['TOTAL', 'GRE']
 
-    context['selected_busiid'] = selected_busiid
-    context['busiid_list'] = formatted_busiid_list
-    # 화면 제목용으로 현재 선택된 사업자의 한글 이름도 넘겨줍니다.
-    context['selected_busi_name'] = BUSI_MAP.get(selected_busiid, selected_busiid)
+        # 2. 데이터를 최신순으로 가져옵니다.
+        qs = cpstatSum.objects.filter(busiid__in=self.target_busiids).order_by('-collected_date', '-hour')
 
-    # ==========================================
-    # [추가] 차트용 데이터 가공 로직
-    # ==========================================
-    
-    # 1. 상위 5개 사업자 찾기 (TOTAL, GRE 제외)
-    top_5_qs = cpstatSum.objects.exclude(busiid__in=['TOTAL', 'GRE']).values('busiid').annotate(
-        grand_total=Sum(
-            F('stat_1_count') + F('stat_2_count') + F('stat_3_count') + 
-            F('stat_4_count') + F('stat_5_count') + F('stat_9_count')
-        )
-    ).order_by('-grand_total')[:5]
-    
-    # 차트에 표시할 대상 사업자 리스트 (Top 5 + TOTAL + GRE)
-    target_busiids = [item['busiid'] for item in top_5_qs] + ['TOTAL', 'GRE']
-
-    # 2. 대상 사업자들의 데이터 모두 가져오기 (시간 오름차순 정렬)
-    chart_data_qs = cpstatSum.objects.filter(busiid__in=target_busiids).order_by('collected_date', 'hour')
-
-    # 3. 데이터 가공 (시간별로 정렬)
-    times = [] # x축 라벨 (예: 02-09 15시)
-    for obj in chart_data_qs:
-        time_str = f"{obj.collected_date.strftime('%m-%d')} {obj.hour}시"
-        if time_str not in times:
-            times.append(time_str)
-
-    # 사업자별로 충전율, 장애율 데이터를 담을 딕셔너리 초기화
-    charge_rates = {b: [0] * len(times) for b in target_busiids}
-    error_rates = {b: [0] * len(times) for b in target_busiids}
-
-    # 데이터 채우기
-    for obj in chart_data_qs:
-        time_str = f"{obj.collected_date.strftime('%m-%d')} {obj.hour}시"
-        idx = times.index(time_str)
-        b = obj.busiid
+        # 3. 시간(행) 기준으로 피벗 만들기 & 최근 168개 제한
+        pivot_dict = {}
         
-        total = (obj.stat_1_count + obj.stat_2_count + obj.stat_3_count + 
-                  obj.stat_4_count + obj.stat_5_count + obj.stat_9_count)
-        
-        if total > 0:
-            # 충전율 (충전중 / 전체)
-            charge_rate = (obj.stat_3_count / total) * 100
-            # 장애율 ((통신이상 + 상태미확인) / 전체) - 필요시 점검중(5) 포함 가능
-            error_rate = ((obj.stat_1_count + obj.stat_4_count + obj.stat_5_count + obj.stat_9_count) / total) * 100
-        else:
-            charge_rate = 0
-            error_rate = 0
+        for obj in qs:
+            time_key = f"{obj.collected_date.strftime('%Y-%m-%d')} {obj.hour:02d}"
             
-        charge_rates[b][idx] = round(charge_rate, 2)
-        error_rates[b][idx] = round(error_rate, 2)
+            # 새로운 시간대가 등장했을 때
+            if time_key not in pivot_dict:
+                # 168개가 이미 채워졌다면 169번째 데이터부터는 아예 처리하지 않고 종료!
+                if len(pivot_dict) >= 168:
+                    break 
+                
+                # 빈 데이터 구조 초기화
+                pivot_dict[time_key] = {
+                    'collected_date': obj.collected_date,
+                    'hour': obj.hour,
+                    'busi_data': [{'charge': 0, 'error': 0} for _ in range(len(self.target_busiids))]
+                }
 
-    # 4. JSON 변환을 위해 구조화
-    chart_data = {
-        'labels': times,
-        'charge_datasets': [{'label': b, 'data': charge_rates[b]} for b in target_busiids],
-        'error_datasets': [{'label': b, 'data': error_rates[b]} for b in target_busiids],
-    }
+            # 충전율/장애율 계산
+            total = (obj.stat_1_count + obj.stat_2_count + obj.stat_3_count + 
+                     obj.stat_4_count + obj.stat_5_count + obj.stat_9_count)
+            
+            if total > 0:
+                charge_rate = (obj.stat_3_count / total) * 100
+                error_rate = ((obj.stat_1_count + obj.stat_4_count + obj.stat_5_count + obj.stat_9_count) / total) * 100
+            else:
+                charge_rate = 0
+                error_rate = 0
 
-    # context에 담아서 전달 (JSON 문자열로 변환)
-    context['chart_data_json'] = json.dumps(chart_data)
+            # 데이터를 올바른 사업자 위치(idx)에 삽입
+            idx = self.target_busiids.index(obj.busiid)
+            pivot_dict[time_key]['busi_data'][idx] = {
+                'charge': round(charge_rate, 2),
+                'error': round(error_rate, 2)
+            }
 
-    return context
+        # 4. 표와 차트에서 공통으로 쓰기 위해 클래스 변수에 저장해 둠 (DB 중복 호출 방지)
+        self.full_table_data = list(pivot_dict.values())
+        
+        # Pagination 처리를 위해 168개 리스트를 반환 (Django가 이 중 12개씩 잘라서 표에 보여줍니다)
+        return self.full_table_data
+
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        BUSI_MAP = {
+            'PL': '플러그링크', 'ME': '환경부', 'EV': '에버온', 'LU': 'LG유플러스',
+            'NT': '나이스차저', 'PI': 'GS차지비', 'PW': '파워큐브코리아', 'TOTAL': '전체사업자',
+            'GRE': '플러그링크(GRE)',
+        }
+
+        # 테이블 컬럼 헤더 생성을 위해 사업자 정보 전달
+        target_busi_info = [{'id': b, 'name': BUSI_MAP.get(b, b)} for b in self.target_busiids]
+        context['target_busi_info'] = target_busi_info
+
+        # ==========================================
+        # 차트용 데이터 가공 (DB 조회 없이 self.full_table_data 재활용)
+        # ==========================================
+        
+        # 차트는 시간이 왼쪽(과거)에서 오른쪽(최신)으로 가야 하므로 데이터를 뒤집어 줍니다.
+        chart_raw_data = list(reversed(self.full_table_data))
+        
+        times = []
+        charge_rates = {b: [] for b in self.target_busiids}
+        error_rates = {b: [] for b in self.target_busiids}
+
+        # 저장해둔 리스트에서 값을 쏙쏙 뽑아서 차트용 배열로 재조립
+        for row in chart_raw_data:
+            time_str = f"{row['collected_date'].strftime('%m-%d')} {row['hour']}시"
+            times.append(time_str)
+            
+            for idx, b in enumerate(self.target_busiids):
+                charge_rates[b].append(row['busi_data'][idx]['charge'])
+                error_rates[b].append(row['busi_data'][idx]['error'])
+
+        chart_data = {
+            'labels': times,
+            'charge_datasets': [{'label': BUSI_MAP.get(b, b), 'data': charge_rates[b]} for b in self.target_busiids],
+            'error_datasets': [{'label': BUSI_MAP.get(b, b), 'data': error_rates[b]} for b in self.target_busiids],
+        }
+        
+        context['chart_data_json'] = json.dumps(chart_data)
+
+        # 페이지네이션 파라미터 유지
+        query_params = self.request.GET.copy()
+        if 'page' in query_params:
+            del query_params['page']
+        context['query_string'] = query_params.urlencode()
+
+        return context
 
 class cpostatSumList(ListView):
   model = cpstatSum
@@ -166,6 +184,15 @@ class cpostatSumList(ListView):
     raw_busiid_list = cpstatSum.objects.values_list('busiid', flat=True).distinct().order_by('busiid')
     context['busiid_list'] = [{'id': b, 'name': BUSI_MAP.get(b, b)} for b in raw_busiid_list]
     context['selected_busi_name'] = BUSI_MAP.get(context['selected_busiid'], context['selected_busiid'])
+
+    # 추가: 현재의 GET 파라미터(검색조건)를 그대로 유지하기 위한 로직
+    query_params = self.request.GET.copy()
+    # 파라미터 중에 'page'가 있다면 중복을 막기 위해 제거합니다.
+    if 'page' in query_params:
+      del query_params['page']
+    
+    # 나머지 검색 조건들을 & 로 이어진 문자열로 변환 (예: busiid=PL&start_date=2026-02-12)
+    context['query_string'] = query_params.urlencode()
 
     return context
   

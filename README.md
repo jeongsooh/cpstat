@@ -15,3 +15,7 @@ $ python manage.py clear_charger_data
 - dashboard: staticstics
 - data upload
 - download data with csv form
+
+### v04 upload 260225
+- chart and table from top 5 CPOs for 7 days
+- including Total and GRE CPs out of PL data

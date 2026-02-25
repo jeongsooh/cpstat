@@ -2,24 +2,24 @@
 
 {% block contents %}
 <div class="row mt-3 mx-3">
-  <div class="col-md-12 fw-bold"><h4>충전기 현황 통계</h4></div>
+  <div class="col-md-12 fw-bold"><h4>환경부 충전기 운용 현황</h4></div>
 </div>
 <div class="row mt-3 mx-3">
-  <div class="col-md-12 fw-bold"><h5>전체 충전기 충전 및 장애 현황</h5></div>
-  <div class="col-md-6 fw-bold"><h6>지난 3일 간 충전율 추이(%)</h6>
+  <div class="col-md-12 fw-bold"><h5>전체 충전기 및 주요 사업자 충전 및 장애 현황</h5></div>
+  <div class="col-md-6 fw-bold"><h6>지난 7일 간 충전율 추이(%)</h6>
     <div style="position: relative; height:40vh; width:100%">
       <canvas id="chargingRatioChart"></canvas>
     </div>
   </div>
-  <div class="col-md-6 fw-bold"><h6>지난 3일 간 장애율 추이(%)</h6>
+  <div class="col-md-6 fw-bold"><h6>지난 7일 간 장애율 추이(%)</h6>
     <div style="position: relative; height:40vh; width:100%">
       <canvas id="errorRatioChart"></canvas>
     </div>
   </div>
 </div>
 <div class="row mt-3 mx-3">
-  <div class="col-md-10 fw-bold"><h5>충전기 현황 상세정보: {{ selected_busi_name }}</h5></div>
-  <div class="col-md-2">
+  <div class="col-md-12 fw-bold"><h5>충전율 및 장애율 현황 상세보기</h5></div>
+  <!-- <div class="col-md-2">
     <form method="get" action="">
       <select name="busiid" id="busiid" class="form-select" onchange="this.form.submit()">
         {% for busi in busiid_list %}
@@ -29,11 +29,46 @@
         {% endfor %}
       </select>
     </form>
-  </div>
+  </div> -->
 </div>
 <div class="row mt-2 mx-2">
   <div class="col-12">
-    <table class="table table-light">
+    <table class="table table-bordered table-hover text-center align-middle">
+      <thead class="table-light">
+        <tr>
+          <th rowspan="2" class="align-middle">수집 일자</th>
+          <th rowspan="2" class="align-middle">시간</th>
+          {% for busi in target_busi_info %}
+            <th colspan="2">{{ busi.name }}</th>
+          {% endfor %}
+        </tr>
+        <tr>
+          {% for busi in target_busi_info %}
+            <th>충전율</th>
+            <th>장애율</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      
+      <tbody>
+        {% for row in cpstatsumList %}
+        <tr>
+          <td>{{ row.collected_date|date:"Y-m-d" }}</td>
+          <td>{{ row.hour }}시</td>
+          
+          {% for b_data in row.busi_data %}
+            <td>{{ b_data.charge }}%</td>
+            <td class="text-danger">{{ b_data.error }}%</td>
+          {% endfor %}
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="16" class="text-center py-4">조회된 통계 데이터가 없습니다.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <!-- <table class="table table-light">
       <thead class="thead-light">
         <tr>
           <th>수집 일자</th>
@@ -52,8 +87,6 @@
       <tbody class="text-dark">
         {% for stat in cpstatsumList %}
         <tr>
-          <!-- <th scope="row">{{ user.id }}</th>
-          <th><a href="/user/{{ user.id }}">{{ user.userid }}</a></th> -->
           <td>{{ stat.collected_date|date:"Y-m-d" }}</td>
           <td>{{ stat.hour }}시</td>
           <td>{{ stat.stat_1_count }}</td>
@@ -72,37 +105,43 @@
         </tr>
         {% endfor %}
       </tbody>
-    </table>
+    </table> -->
     {% if is_paginated %}
-      <div class="row">
-        <div class="col-md-12">
-          <nav aria-label="Page navigation">
-            <ul class="pagination justify-content-center">
-              {% if page_obj.has_previous %}
-                <li class="page-item">
-                  <a class="page-link" href="?page=1">처음</a>
-                </li>
-                <li class="page-item">
-                  <a class="page-link" href="?page={{ page_obj.previous_page_number }}">이전</a>
-                </li>
-              {% endif %}
-
-              <li class="page-item disabled">
-                <a class="page-link" href="#">{{ page_obj.number }}</a>
+    <div class="row mt-4 mb-4">
+      <div class="col-12 d-flex justify-content-center">
+        <nav aria-label="Page navigation">
+          <ul class="pagination">
+            
+            {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ query_string }}">&laquo; 이전</a>
               </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">&laquo; 이전</span>
+              </li>
+            {% endif %}
 
-              {% if page_obj.has_next %}
-                <li class="page-item">
-                  <a class="page-link" href="?page={{ page_obj.next_page_number }}">다음</a>
-                </li>
-                <li class="page-item">
-                  <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">마지막</a>
-                </li>
-              {% endif %}
-            </ul>
-          </nav>
-        </div>
+            <li class="page-item active">
+              <span class="page-link">
+                {{ page_obj.number }} / {{ paginator.num_pages }}
+              </span>
+            </li>
+
+            {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ query_string }}">다음 &raquo;</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">다음 &raquo;</span>
+              </li>
+            {% endif %}
+
+          </ul>
+        </nav>
       </div>
+    </div>
     {% endif %}
   </div>
 </div>
